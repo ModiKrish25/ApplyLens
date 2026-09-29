@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Pipeline board{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Pipeline board</h1>
+    <p class="muted">Drag cards between columns to update status — every move is recorded in the timeline.</p>
+  </div>
+  <a class="btn" href="{{ url_for('applications.index') }}">List view →</a>
+</div>
+
+<div class="board" id="board">
+  {% for s in statuses %}
+  <div class="board-col" data-status="{{ s }}">
+    {% set items = apps | selectattr('status', 'equalto', s) | list %}
+    <h2>{{ s }} <span class="muted board-count">({{ items | length }})</span></h2>
+    <div class="board-drop">
+    {% for a in items %}
+    <a class="board-card" draggable="true" data-app-id="{{ a.id }}"
+       href="{{ url_for('applications.detail', app_id=a.id) }}">
+      <strong>{{ a.job.company or 'Unknown' }}</strong>
+      <span>{{ a.job.role or 'Untitled role' }}</span>
+      {% if a.resume %}<span class="small muted">📄 {{ a.resume.title }}</span>{% endif %}
+      {% if a.is_stale %}<span class="small muted">⏳ stale · {{ a.days_in_status }}d</span>{% endif %}
+      {% if a.applied_on %}<span class="small muted">↓ {{ a.applied_on.strftime('%d %b') }}</span>{% endif %}
+    </a>
+    {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<p class="small muted" id="board-note" hidden></p>
+
+<script>
+(function () {
+  var board = document.getElementById('board');
+  if (!board) return;
+  var note = document.getElementById('board-note');
+  var dragging = null;
+
+  board.querySelectorAll('.board-card').forEach(function (card) {
+    card.addEventListener('dragstart', function (e) {
+      dragging = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.appId);
+    });
+    card.addEventListener('dragend', function () {
+      card.classList.remove('dragging');
+      board.querySelectorAll('.board-col').forEach(function (c) { c.classList.remove('drop-ok'); });
+      dragging = null;
+    });
+  });
+
+  board.querySelectorAll('.board-col').forEach(function (col) {
+    col.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      col.classList.add('drop-ok');
+    });
+    col.addEventListener('dragleave', function () { col.classList.remove('drop-ok'); });
+    col.addEventListener('drop', function (e) {
+      e.preventDefault();
+      col.classList.remove('drop-ok');
+      if (!dragging) return;
+      var target = col.dataset.status;
+      var count = col.querySelector('.board-count');
+      var fromCol = dragging.closest('.board-col');
+      if (fromCol === col) return;
+
+      // optimistic move
+      col.querySelector('.board-drop').appendChild(dragging);
+      bump(col); bump(fromCol);
+      var appId = dragging.dataset.appId;
+
+      fetch('/applications/' + appId + '/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: target })
+      }).then(function (r) {
+        if (!r.ok) throw new Error('server said ' + r.status);
+        note.hidden = false;
+        note.textContent = '✓ Moved to “' + target + '” — timeline updated.';
+      }).catch(function () {
+        // rollback on failure
+        fromCol.querySelector('.board-drop').appendChild(dragging);
+        bump(col); bump(fromCol);
+        note.hidden = false;
+        note.textContent = '✗ Could not move the card — status unchanged.';
+      });
+    });
+  });
+
+  function bump(col) {
+    var n = col.querySelectorAll('.board-card').length;
+    col.querySelector('.board-count').textContent = '(' + n + ')';
+  }
+})();
+</script>
+{% endblock %}

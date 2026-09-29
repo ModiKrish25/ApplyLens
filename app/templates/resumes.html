@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Resumes{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Resume versions</h1>
+  <a class="btn btn-ghost" href="{{ url_for('resumes.compare_form') }}">⚖ Compare versions</a>
+</div>
+
+<section class="card">
+  <h2>Upload a new version</h2>
+  <form method="post" action="{{ url_for('resumes.upload') }}" enctype="multipart/form-data" class="form-grid">
+    <label>Version title
+      <input type="text" name="title" placeholder="Backend Resume v4" required>
+    </label>
+    <label>File (PDF or DOCX)
+      <input type="file" name="file" accept=".pdf,.docx" required>
+    </label>
+    <button class="btn btn-primary" type="submit">Upload &amp; analyze</button>
+  </form>
+  <p class="muted">Text-based files only — scanned/image PDFs can't be parsed. You keep every version, forever.</p>
+</section>
+
+<section class="card">
+  <h2>Active versions</h2>
+  <table class="table">
+    <tr><th>Version</th><th>Words</th><th>Health</th><th>Used in</th><th>Uploaded</th><th></th></tr>
+    {% for r in active %}
+    <tr>
+      <td><a href="{{ url_for('resumes.detail', resume_id=r.id) }}"><strong>{{ r.title }}</strong></a><div class="muted">{{ r.original_filename }}</div></td>
+      <td>{{ r.word_count }}</td>
+      <td>
+        {% if r.health_score is not none %}
+        <span class="score {{ 'score-hi' if r.health_score >= 70 else ('score-mid' if r.health_score >= 50 else 'score-lo') }}">{{ r.health_score }}/100</span>
+        {% else %}—{% endif %}
+      </td>
+      <td>{{ used[r.id] }} app{{ 's' if used[r.id] != 1 }}</td>
+      <td class="muted">{{ r.created_at.strftime('%d %b %Y') }}</td>
+      <td class="row-actions">
+        <a class="btn btn-sm" href="{{ url_for('resumes.download', resume_id=r.id) }}">⬇</a>
+        <form method="post" action="{{ url_for('resumes.archive', resume_id=r.id) }}" class="inline">
+          <button class="btn btn-sm btn-ghost" type="submit">Archive</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">No resumes yet — upload your first version above.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+
+{% if archived %}
+<section class="card">
+  <h2>Archived</h2>
+  <table class="table">
+    <tr><th>Version</th><th>Uploaded</th><th></th></tr>
+    {% for r in archived %}
+    <tr>
+      <td>{{ r.title }}</td>
+      <td class="muted">{{ r.created_at.strftime('%d %b %Y') }}</td>
+      <td class="row-actions">
+        <form method="post" action="{{ url_for('resumes.archive', resume_id=r.id) }}" class="inline">
+          <button class="btn btn-sm btn-ghost" type="submit">Restore</button>
+        </form>
+        <form method="post" action="{{ url_for('resumes.delete', resume_id=r.id) }}" class="inline"
+              onsubmit="return confirm('Delete this version permanently?')">
+          <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ApplyLens{% endblock %} — ApplyLens</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  {% if current_user.is_authenticated %}
+  {% set ep = request.endpoint or '' %}
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="{{ url_for('dashboard.index') }}"><span class="brand-dot">◉</span> ApplyLens</a>
+      <nav>
+        <a href="{{ url_for('dashboard.index') }}" class="{{ 'nav-active' if ep == 'dashboard.index' }}"><span class="ico">▦</span> Dashboard</a>
+
+        <div class="nav-group">Intelligence</div>
+        <a href="{{ url_for('resumes.index') }}" class="{{ 'nav-active' if ep.startswith('resumes.') }}"><span class="ico">📄</span> Resumes</a>
+        <a href="{{ url_for('jobs.index') }}" class="{{ 'nav-active' if ep.startswith('jobs.') }}"><span class="ico">💼</span> Jobs</a>
+        <a href="{{ url_for('analytics.my_skills') }}" class="{{ 'nav-active' if ep == 'analytics.my_skills' }}"><span class="ico">🎯</span> My Skills</a>
+
+        <div class="nav-group">Pipeline</div>
+        <a href="{{ url_for('applications.index') }}" class="{{ 'nav-active' if ep.startswith('applications.') and ep != 'applications.board' and 'interview' not in ep }}"><span class="ico">🗂</span> Applications</a>
+        <a href="{{ url_for('applications.board') }}" class="{{ 'nav-active' if ep == 'applications.board' }}"><span class="ico">📋</span> Board</a>
+        <a href="{{ url_for('applications.interviews') }}" class="{{ 'nav-active' if 'interview' in ep }}"><span class="ico">🎤</span> Interviews</a>
+        <a href="{{ url_for('applications.offers') }}" class="{{ 'nav-active' if ep == 'applications.offers' }}"><span class="ico">🏅</span> Offers</a>
+
+        <div class="nav-group">Growth</div>
+        <a href="{{ url_for('analytics.learning_plan') }}" class="{{ 'nav-active' if ep == 'analytics.learning_plan' or ep.startswith('analytics.plan') }}"><span class="ico">🎯</span> Learning plan</a>
+
+        <div class="nav-group">Insights</div>
+        <a href="{{ url_for('analytics.index') }}" class="{{ 'nav-active' if ep == 'analytics.index' }}"><span class="ico">📊</span> Analytics</a>
+        <a href="{{ url_for('reports.index') }}" class="{{ 'nav-active' if ep.startswith('reports.') }}"><span class="ico">🖨</span> Reports</a>
+      </nav>
+      <div class="sidebar-foot">
+        <span class="muted">Signed in as <strong>{{ current_user.name }}</strong></span>
+        <button type="button" class="btn btn-ghost btn-sm" id="logout-btn">Log out</button>
+      </div>
+    </aside>
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="flash flash-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+      <footer class="site-footer">
+        <span>ApplyLens — rule-based, evidence-backed career tools.</span>
+        <span>Scores are transparent heuristics, not verdicts.</span>
+      </footer>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="logout-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="logout-title">
+      <h2 id="logout-title">Log out?</h2>
+      <p class="muted">You'll need to sign in again to see your pipeline, resumes and reports.</p>
+      <div class="btn-row modal-actions">
+        <button type="button" class="btn" id="logout-cancel">Cancel</button>
+        <a class="btn btn-danger" href="{{ url_for('auth.logout') }}">Yes, log out</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var openBtn = document.getElementById('logout-btn');
+      var modal = document.getElementById('logout-modal');
+      if (!openBtn || !modal) return;
+      var cancelBtn = document.getElementById('logout-cancel');
+      function closeModal() { modal.hidden = true; }
+      openBtn.addEventListener('click', function () {
+        modal.hidden = false;
+        cancelBtn.focus();
+      });
+      cancelBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.hidden) closeModal();
+      });
+    })();
+  </script>
+  {% else %}
+  <main class="auth-wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block auth_content %}{% endblock %}
+  </main>
+  {% endif %}
+</body>
+</html>

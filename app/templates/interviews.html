@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Interviews{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Interviews</h1></div>
+
+<section class="card">
+  <h2>Upcoming</h2>
+  {% for iv in upcoming %}
+  <div class="row-item">
+    <div>
+      <strong>{{ iv.round_name }}</strong> — {{ iv.job.company or 'Unknown' }} · {{ iv.job.role or '' }}
+      <div class="muted">{{ iv.scheduled_at.strftime('%a, %d %b %Y %H:%M') }} · {{ iv.mode or 'mode TBC' }}</div>
+      {% if iv.application %}
+      <a class="link-sm" href="{{ url_for('applications.detail', app_id=iv.application.id) }}">open application →</a>
+      {% endif %}
+    </div>
+    <form method="post" action="{{ url_for('applications.interview_outcome', iv_id=iv.id) }}" class="inline btn-row">
+      <select name="outcome">
+        <option>Pending</option><option>Passed</option><option>Failed</option>
+      </select>
+      <button class="btn btn-sm" type="submit">Set</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="muted">Nothing scheduled.</p>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Past &amp; completed</h2>
+  {% for iv in past %}
+  <div class="row-item">
+    <div>
+      <strong>{{ iv.round_name }}</strong> — {{ iv.job.company or 'Unknown' }} · {{ iv.job.role or '' }}
+      <div class="muted">{{ iv.scheduled_at.strftime('%a, %d %b %Y %H:%M') }} · {{ iv.mode or 'mode TBC' }}</div>
+    </div>
+    <span class="pill {{ 'st-offer' if iv.outcome == 'Passed' else ('st-rejected' if iv.outcome == 'Failed' else 'st-saved') }}">{{ iv.outcome }}</span>
+  </div>
+  {% else %}
+  <p class="muted">No past interviews.</p>
+  {% endfor %}
+</section>
+{% endblock %}

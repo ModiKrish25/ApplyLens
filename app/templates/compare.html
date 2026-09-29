@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Compare versions{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Compare resume versions</h1></div>
+
+<section class="card">
+  <form method="get" action="{{ url_for('resumes.compare_results') }}" class="form-grid">
+    <label>Version A
+      <select name="a" required>
+        {% for r in resumes %}
+        <option value="{{ r.id }}" {% if ra and ra.id == r.id %}selected{% endif %}>{{ r.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Version B (newer?)
+      <select name="b" required>
+        {% for r in resumes %}
+        <option value="{{ r.id }}" {% if rb and rb.id == r.id %}selected{% endif %}>{{ r.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="btn btn-primary" type="submit">Compare</button>
+  </form>
+</section>
+
+{% if result %}
+<section class="grid grid-4">
+  <div class="card stat"><span class="stat-num">{{ result.stats.score_a if result.stats.score_a is not none else '—' }}</span><span class="stat-label">A checklist score</span></div>
+  <div class="card stat"><span class="stat-num">{{ result.stats.score_b if result.stats.score_b is not none else '—' }}</span><span class="stat-label">B checklist score</span></div>
+  <div class="card stat"><span class="stat-num">+{{ result.stats.added }} / −{{ result.stats.lost }}</span><span class="stat-label">Skills added / lost</span></div>
+  <div class="card stat"><span class="stat-num">{{ result.stats.words_a }} → {{ result.stats.words_b }}</span><span class="stat-label">Word count</span></div>
+</section>
+
+<section class="card">
+  <h2>Skill mentions: {{ ra.title }} → {{ rb.title }}</h2>
+  <table class="table">
+    <tr><th>Skill</th><th class="num">{{ ra.title|truncate(18) }}</th><th class="num">{{ rb.title|truncate(18) }}</th><th>Change</th></tr>
+    {% for row in result.rows %}
+    <tr>
+      <td>{{ row.name }}</td>
+      <td class="num">{{ row.a or '—' }}</td>
+      <td class="num">{{ row.b or '—' }}</td>
+      <td>
+        {% if row.status == 'added' %}<span class="pill st-offer">+ added</span>
+        {% elif row.status == 'lost' %}<span class="pill st-rejected">− lost</span>
+        {% elif row.status == 'up' %}<span class="pill st-applied">↑ up</span>
+        {% elif row.status == 'down' %}<span class="pill st-screening">↓ down</span>
+        {% else %}<span class="muted">same</span>{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">No comparable skills.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+
+<section class="card">
+  <h2>Sections present</h2>
+  <table class="table">
+    <tr><th>Section</th><th>{{ ra.title|truncate(22) }}</th><th>{{ rb.title|truncate(22) }}</th></tr>
+    {% for s in result.sections %}
+    <tr><td>{{ s.name }}</td><td>{{ s.a }}</td><td>{{ s.b }}</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
+{% endblock %}

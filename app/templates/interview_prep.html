@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Interview prep — {{ app.job.role or 'Application' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Interview prep kit</h1>
+    <p class="muted">
+      {{ app.job.company or 'Unknown company' }} — {{ app.job.role or 'Untitled role' }}
+      · every question below exists because of a specific gap or claim in <a href="{{ url_for('resumes.detail', resume_id=app.resume.id) }}">{{ app.resume.title }}</a>
+    </p>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('applications.detail', app_id=app.id) }}">← Application</a>
+    <a class="btn" href="{{ url_for('applications.prep', app_id=app.id) }}">↻ Rebuild</a>
+  </div>
+</div>
+
+{% if upcoming %}
+<section class="card accent-top">
+  <div class="match-head">
+    <div>
+      <h2>Next round: {{ upcoming.round_name }}</h2>
+      <p class="muted">{{ upcoming.scheduled_at.strftime('%a, %d %b %Y %H:%M') }} · {{ upcoming.mode or 'mode TBC' }}</p>
+    </div>
+    {% if kit.round_focus %}<p class="small" style="max-width:420px">{{ kit.round_focus }}</p>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="match-head">
+    <h2>What to prepare <span class="muted small">({{ kit.total_items }} items, rule-generated)</span></h2>
+  </div>
+
+  {% if kit.deep_dives %}
+  <h3>🔍 Deep dives — your strengths will be probed</h3>
+  {% for d in kit.deep_dives %}
+  <div class="prep-item">
+    <div class="prep-q">{{ d.q }}</div>
+    <div class="prep-why">why: {{ d.why }}</div>
+    {% if d.evidence %}<div class="evidence">“…{{ d.evidence }}…”</div>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if kit.gaps %}
+  <h3>⚠ Gaps — expect the awkward question</h3>
+  {% for g in kit.gaps %}
+  <div class="prep-item">
+    <div class="prep-q">{{ g.q }}</div>
+    <div class="prep-why">why: {{ g.why }}</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if kit.number_claims %}
+  <h3>🔢 Your numbers — be ready to defend them</h3>
+  {% for n in kit.number_claims %}
+  <div class="prep-item">
+    <div class="prep-q">“{{ n }}” — how was this measured? What was the baseline?</div>
+    <div class="prep-why">why: quantified claims always draw follow-ups</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if kit.top_projects %}
+  <h3>🧰 Projects to rehearse — closest to this job</h3>
+  {% for tp in kit.top_projects %}
+  <div class="prep-item">
+    <div class="prep-q"><strong>{{ tp.name }}</strong> — rehearse a 2-minute walkthrough: problem → your approach → result.
+      {% if tp.hits %}<span class="muted small">touches {{ tp.hits }} required skill{{ 's' if tp.hits != 1 }}</span>{% endif %}
+    </div>
+    {% if tp.text %}<div class="small muted">{{ tp.text|truncate(220) }}</div>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if kit.sharpen %}
+  <h3>✨ Cheap wins — preferred skills you already show</h3>
+  <div class="chips">
+    {% for s in kit.sharpen %}<span class="chip chip-ok">{{ s.name }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if kit.experience %}
+  <h3>💼 Recent roles — your stories live here</h3>
+  {% for e in kit.experience %}
+  <div class="prep-item">
+    <div class="prep-q"><strong>{{ e.get('title', '') or 'Role' }}</strong> <span class="muted small">{{ e.get('dates', '') }}</span></div>
+    {% if e.get('detail') %}<div class="small muted">{{ e.get('detail')|truncate(200) }}</div>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if kit.behavioural %}
+  <h3>🗣 Behavioural — pick stories before the day</h3>
+  <table class="table">
+    <tr><th>Theme</th><th>Question</th></tr>
+    {% for theme, q in kit.behavioural %}
+    <tr><td><strong>{{ theme }}</strong></td><td>{{ q }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

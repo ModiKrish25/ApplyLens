@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}{{ resume.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ resume.title }}</h1>
+    <p class="muted">{{ resume.original_filename }} · {{ resume.word_count }} words · uploaded {{ resume.created_at.strftime('%d %b %Y') }}</p>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('resumes.download', resume_id=resume.id) }}">⬇ Original file</a>
+    <a class="btn" href="{{ url_for('resumes.export_txt', resume_id=resume.id) }}">Export analysis (.txt)</a>
+    <a class="btn" href="{{ url_for('reports.resume_report', resume_id=resume.id) }}">PDF report</a>
+    <a class="btn btn-primary" href="{{ url_for('reports.resume_document', resume_id=resume.id) }}">📄 Clean resume PDF</a>
+    <form method="post" action="{{ url_for('resumes.archive', resume_id=resume.id) }}" class="inline">
+      <button class="btn btn-ghost" type="submit">{{ 'Restore' if resume.is_archived else 'Archive' }}</button>
+    </form>
+  </div>
+</div>
+
+<section class="card accent-top">
+  <h2>⭐ Proofreader <span class="muted small">(typos, dates, tense — every finding quoted)</span></h2>
+  <div class="chips">
+    {% for f in report.findings %}<span class="chip">{{ f }}</span>{% endfor %}
+  </div>
+
+  {% if report.typos %}
+  <h3>Spelling</h3>
+  <table class="table">
+    <tr><th>Word</th><th>Suggestion</th><th>Where it appears</th></tr>
+    {% for t in report.typos %}
+    <tr><td><strong>{{ t.word }}</strong></td><td class="small">→ {{ t.suggestion }}</td><td class="small muted">“…{{ t.snippet }}…”</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {% if report.dates.future_ranges or report.dates.suspicious_gaps or report.dates.gaps %}
+  <h3>Dates</h3>
+  {% for fr in report.dates.future_ranges %}
+  <div class="evidence">ends in {{ fr.end_year }}: “{{ fr.range }}” — “…{{ fr.snippet }}…”</div>
+  {% endfor %}
+  {% for g in report.dates.suspicious_gaps %}
+  <div class="evidence">ends before it starts: “{{ g.range }}” — “…{{ g.snippet }}…”</div>
+  {% endfor %}
+  {% for g in report.dates.gaps %}
+  <div class="evidence">{{ g.months }}-month gap between “{{ g.after }}” and “{{ g.before }}”</div>
+  {% endfor %}
+  {% endif %}
+
+  {% if report.tense.past_bullets and report.tense.present_bullets %}
+  <h3>Tense</h3>
+  <p class="small muted">{{ report.tense.past_bullets }} past-tense vs {{ report.tense.present_bullets }} present-tense bullets in Experience. Pick one per role: past roles in past tense, current role in present tense.</p>
+  {% endif %}
+</section>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Health score <span class="muted small">(transparent checklist — not an objective measure)</span></h2>
+    <div class="score-big {{ 'score-hi' if health.score >= 70 else ('score-mid' if health.score >= 50 else 'score-lo') }}">{{ health.score }}<span class="small">/100</span></div>
+    <p class="muted">{{ band[1] }}</p>
+    <table class="table">
+      <tr><th>Check</th><th>Result</th><th class="num">Points</th></tr>
+      {% for c in health.checks %}
+      <tr>
+        <td>{{ c.label }} {% if c.note %}<div class="muted small">{{ c.note }}</div>{% endif %}</td>
+        <td>{% if c.passed %}<span class="pill st-offer">✓ pass</span>{% else %}<span class="pill st-rejected">✗ fail</span>{% endif %}</td>
+        <td class="num">{{ c.points }}/{{ c.max }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <div class="stack-lg">
+    <section class="card">
+      <h2>Contact details detected</h2>
+      <table class="table kv">
+        {% for k, v in analysis.contact.items() %}
+        <tr><th>{{ k|capitalize }}</th><td>{{ v }}</td></tr>
+        {% else %}
+        <tr><td class="muted">No contact info detected in the top of the document.</td></tr>
+        {% endfor %}
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Sections detected</h2>
+      <div class="chips">
+        {% for s in analysis.sections %}
+        <span class="chip chip-ok">{{ s|title }}</span>
+        {% else %}
+        <span class="muted">No standard section headings found — consider adding clear headings like “Experience”, “Skills”, “Education”.</span>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Education</h2>
+      <ul class="plain-list">
+        {% for e in analysis.education %}<li>{{ e }}</li>
+        {% else %}<li class="muted">Not detected.</li>{% endfor %}
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Experience entries</h2>
+      {% for e in analysis.experience %}
+      <div class="row-item">
+        <div>
+          <strong>{{ e.title or 'Role' }}</strong>
+          <div class="muted">{{ e.dates }}</div>
+          <div class="small">{{ e.detail|truncate(160) }}</div>
+        </div>
+      </div>
+      {% else %}
+      <p class="muted">No dated experience entries detected (looked for month-year ranges).</p>
+      {% endfor %}
+    </section>
+
+    <section class="card">
+      <h2>Certifications</h2>
+      <ul class="plain-list">
+        {% for c in analysis.certifications %}<li>{{ c }}</li>
+        {% else %}<li class="muted">None detected.</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+</div>
+
+<section class="card">
+  <details class="acc">
+    <summary><strong>✏️ Rename this version</strong></summary>
+    <div class="acc-body">
+      <form method="post" action="{{ url_for('resumes.rename', resume_id=resume.id) }}" class="form-grid grow">
+        <label class="grow">New title
+          <input type="text" name="title" value="{{ resume.title }}" required>
+        </label>
+        <button class="btn btn-primary" type="submit">Save name</button>
+      </form>
+    </div>
+  </details>
+  <h2>Skills detected ({{ analysis.skills|length }})</h2>
+  <p class="muted small">Count = number of mentions in the document. “Found in” shows which sections mention the skill — a skill backed by Experience or Projects reads stronger than one only listed under Skills.</p>
+  <table class="table">
+    <tr><th>Skill</th><th>Mentions</th><th>Found in</th><th>Evidence</th></tr>
+    {% for s in analysis.skills %}
+    <tr>
+      <td><strong>{{ s.name }}</strong></td>
+      <td>{{ s.count }}</td>
+      <td>{{ s.in_section|join(', ') or '—' }}</td>
+      <td class="small muted">{{ s.evidence[0] if s.evidence }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

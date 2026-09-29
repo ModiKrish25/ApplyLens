@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Match detail{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ resume.title }} ↔ {{ job.role or 'Untitled role' }}</h1>
+    <p class="muted">{{ job.company or 'Unknown company' }} · rule-based matching, every claim backed by evidence below</p>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('jobs.match', job_id=job.id) }}">← All versions</a>
+    <a class="btn" href="{{ url_for('reports.job_report', job_id=job.id, resume_id=resume.id) }}">PDF report</a>
+    {% if app %}<a class="btn btn-primary" href="{{ url_for('applications.prep', app_id=app.id) }}">🎤 Interview prep</a>{% endif %}
+  </div>
+</div>
+
+<section class="card">
+  <div class="match-head">
+    <div>
+      <h2>Coverage</h2>
+      <p class="muted small">Weighted: required skills count ×3, preferred ×1. It is a coverage ratio, not a prediction of success.</p>
+    </div>
+    <div class="score-big {{ 'score-hi' if m.coverage >= 75 else ('score-mid' if m.coverage >= 50 else 'score-lo') }}">{{ m.coverage }}<span class="small">%</span></div>
+  </div>
+  <div class="stat-row">
+    <div><strong>{{ m.required_pct if m.required_pct is not none else '—' }}%</strong> required matched</div>
+    <div><strong>{{ m.preferred_pct if m.preferred_pct is not none else '—' }}%</strong> preferred matched</div>
+    <div><strong>{{ m.req_matched }}/{{ m.req_total }}</strong> required</div>
+    <div><strong>{{ m.pref_matched }}/{{ m.pref_total }}</strong> preferred</div>
+  </div>
+</section>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Required skills</h2>
+    {% for s in m.required %}
+    <div class="skill-line">
+      <div class="skill-top">
+        <strong>{{ s.name }}</strong>
+        {% if s.matched %}<span class="pill st-offer">✓ matched</span>{% else %}<span class="pill st-rejected">✗ not detected</span>{% endif %}
+      </div>
+      <div class="bar"><span class="bar-fill {% if not s.matched %}bar-miss{% endif %}" style="width: {{ [s.count * 10, 100]|min }}%"></span></div>
+      <div class="small muted">
+        {% if s.matched %}{{ s.count }} mention{{ 's' if s.count != 1 }} · found in: {{ s.sections|join(', ') }}
+        {% else %}not found anywhere in this resume{% endif %}
+      </div>
+      {% for ev in s.evidence %}<div class="evidence">“…{{ ev }}…”</div>{% endfor %}
+    </div>
+    {% else %}<p class="muted">No required skills were parsed from this job.</p>{% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>Preferred skills</h2>
+    {% for s in m.preferred %}
+    <div class="skill-line">
+      <div class="skill-top"><strong>{{ s.name }}</strong>
+        {% if s.matched %}<span class="pill st-offer">✓ matched</span>{% else %}<span class="pill st-screening">— not found</span>{% endif %}
+      </div>
+      <div class="bar"><span class="bar-fill {% if not s.matched %}bar-miss{% endif %}" style="width: {{ [s.count * 10, 100]|min }}%"></span></div>
+      {% for ev in s.evidence %}<div class="evidence">“…{{ ev }}…”</div>{% endfor %}
+    </div>
+    {% else %}<p class="muted">No preferred skills parsed.</p>{% endfor %}
+
+    {% if m.weak %}
+    <h2 class="mt">⚠ Mentioned only once</h2>
+    <p class="muted small">Single mentions are worth strengthening — add a project bullet or detail.</p>
+    <div class="chips">{% for s in m.weak %}<span class="chip">{{ s.name }}</span>{% endfor %}</div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card accent-top">
+  <div class="match-head">
+    <div>
+      <h2>⭐ Semantic similarity</h2>
+      <p class="muted small">Engine: {{ sem.engine }}{% if sem.engine == 'lexical' %} (install <code>sentence-transformers</code> to upgrade to neural embeddings){% endif %}.
+      For each requirement sentence in the job post, the closest sentence(s) in your resume — meaning-based, not just keywords.</p>
+    </div>
+    {% if sem.overall is not none %}
+    <div class="score-big {{ 'score-hi' if sem.overall >= 55 else ('score-mid' if sem.overall >= 35 else 'score-lo') }}" style="font-size:1.9rem">{{ sem.overall }}<span class="small">%</span></div>
+    {% endif %}
+  </div>
+  {% if sem.pairs %}
+  <div class="sem-list">
+    {% for p in sem.pairs %}
+    <div class="sem-pair {{ 'sem-strong' if p.best_score >= 55 else ('sem-weak' if p.best_score < 30 else '') }}">
+      <div class="sem-jd"><span class="sem-tag">JD</span> “{{ p.jd }}”</div>
+      {% for mt in p.matches %}
+      <div class="sem-res"><span class="sem-tag sem-tag-res">CV · {{ mt.score }}</span> “{{ mt.resume }}”</div>
+      {% else %}
+      <div class="sem-res muted">— nothing in your resume relates to this requirement</div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Not enough sentence-like text to compare. Paste a fuller job description or check the resume file.</p>
+  {% endif %}
+  <p class="muted small">Read this <em>alongside</em> the keyword coverage above: keywords prove exact skills; semantics catch paraphrases. Neither predicts an offer.</p>
+</section>
+
+{% if rewrites %}
+<section class="card">
+  <h2>✍️ Draft bullet suggestions <span class="muted small">(from your own resume — make them true before using)</span></h2>
+  {% for r in rewrites %}
+  <div class="prep-item">
+    <div class="prep-q"><strong>{{ r.skill }}</strong> — “{{ r.draft }}”</div>
+    <div class="prep-why">{{ r.why }}</div>
+    {% if r.anchor %}<div class="evidence">anchor: “…{{ r.anchor }}…”</div>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Skill gap</h2>
+  <div class="gap-cols">
+    <div>
+      <h3>✓ Already have</h3>
+      {% for g in m.gaps.have %}<span class="chip chip-ok">{{ g.name }}</span>{% endfor %}
+      {% if not m.gaps.have %}<p class="muted">—</p>{% endif %}
+    </div>
+    <div>
+      <h3>⚠ Need to strengthen</h3>
+      {% for g in m.gaps.strengthen %}<span class="chip">{{ g.name }}</span>{% endfor %}
+      {% if not m.gaps.strengthen %}<p class="muted">—</p>{% endif %}
+    </div>
+    <div>
+      <h3>✗ Not detected</h3>
+      {% for g in m.gaps.not_detected %}<span class="chip chip-miss">{{ g.name }}</span>{% endfor %}
+      {% if not m.gaps.not_detected %}<p class="muted">—</p>{% endif %}
+    </div>
+  </div>
+  <p class="muted small">
+    Mark your real proficiency on the <a href="{{ url_for('analytics.my_skills') }}">My Skills</a> page (Not Started → Expert),
+    or turn the ✗ items into goals on your <a href="{{ url_for('analytics.learning_plan') }}">learning plan</a>.
+  </p>
+  <div class="btn-row mt">
+    {% for g in m.gaps.not_detected[:6] %}
+    <form method="post" action="{{ url_for('analytics.plan_add') }}" class="inline">
+      <input type="hidden" name="name" value="{{ g.name }}">
+      <input type="hidden" name="priority" value="1">
+      <input type="hidden" name="job_id" value="{{ job.id }}">
+      <button class="btn btn-sm" type="submit">🎯 Plan: {{ g.name }}</button>
+    </form>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

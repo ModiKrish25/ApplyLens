@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Learning plan{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Skill-gap learning plan</h1>
+    <p class="muted">Turn job-match gaps into tracked goals. {{ open_goals|length }} open · {{ done_goals|length }} done{% if open_goals %} · avg progress {{ avg_progress }}%{% endif %}</p>
+  </div>
+  <form method="post" action="{{ url_for('analytics.plan_add') }}" class="btn-row">
+    <input type="text" name="name" placeholder="Add any skill, e.g. Kubernetes" required style="width:220px">
+    <select name="priority">
+      <option value="1">High</option>
+      <option value="2" selected>Medium</option>
+      <option value="3">Low</option>
+    </select>
+    <button class="btn btn-primary" type="submit">+ Add goal</button>
+  </form>
+</div>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Open goals</h2>
+    {% for g in open_goals %}
+    <div class="goal {% if g.priority == 1 %}goal-high{% endif %}">
+      <div class="goal-head">
+        <div>
+          <strong>{{ g.name|capitalize }}</strong>
+          {% if g.source_company %}<span class="muted small">— for {{ g.source_company }}</span>{% endif %}
+          <span class="chip">{{ g.category }}</span>
+          {% if g.priority == 1 %}<span class="pill st-rejected">high</span>{% elif g.priority == 3 %}<span class="pill st-saved">low</span>{% endif %}
+        </div>
+        <form method="post" action="{{ url_for('analytics.plan_update', goal_id=g.id) }}" class="inline btn-row">
+          <input type="hidden" name="toggle_done" value="1">
+          <button class="btn btn-sm" type="submit">✓ Done</button>
+        </form>
+      </div>
+      <form method="post" action="{{ url_for('analytics.plan_update', goal_id=g.id) }}" class="goal-progress">
+        <span class="bar"><span class="bar-fill" style="width: {{ g.progress }}%"></span></span>
+        <input type="number" name="progress" min="0" max="100" value="{{ g.progress }}" style="width:74px">
+        <button class="btn btn-sm" type="submit">Set %</button>
+        <select name="priority" onchange="this.form.submit()">
+          <option value="1" {% if g.priority == 1 %}selected{% endif %}>High</option>
+          <option value="2" {% if g.priority == 2 %}selected{% endif %}>Med</option>
+          <option value="3" {% if g.priority == 3 %}selected{% endif %}>Low</option>
+        </select>
+      </form>
+    </div>
+    {% else %}
+    <div class="empty"><span class="empty-ico">🎯</span>
+      <p>No open goals. Add gaps from any <a href="{{ url_for('jobs.index') }}">job match</a> or above.</p>
+    </div>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>Completed</h2>
+    {% for g in done_goals %}
+    <div class="row-item">
+      <span><strong>{{ g.name|capitalize }}</strong>{% if g.source_company %} <span class="muted small">— {{ g.source_company }}</span>{% endif %}</span>
+      <form method="post" action="{{ url_for('analytics.plan_update', goal_id=g.id) }}" class="inline btn-row">
+        <input type="hidden" name="toggle_done" value="1">
+        <button class="btn btn-sm" type="submit">↺ Reopen</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="muted">Nothing finished yet — progress to 100% or hit ✓ Done.</p>
+    {% endfor %}
+
+    <h2 class="mt">Suggested from your saved jobs</h2>
+    <p class="muted small">Required skills appearing most often across jobs you've analyzed.</p>
+    {% for name, count in suggestions %}
+    <form method="post" action="{{ url_for('analytics.plan_add') }}" class="row-item inline">
+      <input type="hidden" name="name" value="{{ name }}">
+      <input type="hidden" name="priority" value="2">
+      <span class="grow"><strong>{{ name }}</strong> <span class="muted small">— wanted by {{ count }} job{{ 's' if count != 1 }}</span></span>
+      <button class="btn btn-sm" type="submit">+ Plan</button>
+    </form>
+    {% else %}
+    <p class="muted">Analyze job descriptions to get suggestions.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

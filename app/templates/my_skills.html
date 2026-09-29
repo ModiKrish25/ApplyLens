@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}My Skills{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>My skills</h1>
+  <p class="muted">Your honest self-assessment — powers the skill-gap view and analytics.</p>
+</div>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Add / update a skill</h2>
+    <form method="post" class="form-grid">
+      <label class="grow">Skill
+        <input type="text" name="name" placeholder="e.g. Redis" required>
+      </label>
+      <label>Level
+        <select name="level">
+          {% for lv in levels %}<option value="{{ lv }}">{{ lv }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="btn btn-primary" type="submit">Save</button>
+    </form>
+
+    <h2 class="mt">Tracked skills ({{ skills|length }})</h2>
+    <table class="table">
+      <tr><th>Skill</th><th>Level</th><th>Update</th></tr>
+      {% for s in skills %}
+      <tr>
+        <td><strong>{{ s.name|capitalize }}</strong></td>
+        <td><span class="chip">{{ s.level }}</span></td>
+        <td>
+          <form method="post" class="inline btn-row">
+            <input type="hidden" name="name" value="{{ s.name }}">
+            <select name="level">
+              {% for lv in levels %}<option value="{{ lv }}" {% if lv == s.level %}selected{% endif %}>{{ lv }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-sm" type="submit">Set</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="muted">Nothing tracked yet.</td></tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Suggested from your saved jobs</h2>
+    <p class="muted small">Skills that appear in job descriptions you've analyzed but aren't tracked yet.</p>
+    {% for name, count in suggestions %}
+    <form method="post" class="row-item inline">
+      <input type="hidden" name="name" value="{{ name }}">
+      <input type="hidden" name="level" value="Not Started">
+      <span class="grow"><strong>{{ name }}</strong> <span class="muted small">— in {{ count }} job{{ 's' if count != 1 }}</span></span>
+      <button class="btn btn-sm" type="submit">+ Track</button>
+    </form>
+    {% else %}
+    <p class="muted">Analyze some job descriptions and suggestions will show up here.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

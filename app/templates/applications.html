@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Applications{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Applications</h1>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('applications.export_csv') }}">⬇ Export CSV</a>
+    <a class="btn btn-primary" href="{{ url_for('applications.new') }}">+ Track application</a>
+  </div>
+</div>
+
+<section class="card">
+  <form method="get" class="form-grid">
+    <label class="grow">Search <span class="muted">(company, role, notes, JD text)</span>
+      <input type="text" name="q" value="{{ q }}" placeholder="python django remote">
+    </label>
+    <label>Status
+      <select name="status">
+        <option value="">Any</option>
+        {% for s in statuses %}<option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Company
+      <select name="company">
+        <option value="">Any</option>
+        {% for c in companies %}<option value="{{ c }}" {% if c == company %}selected{% endif %}>{{ c|capitalize }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Technology
+      <input type="text" name="tech" value="{{ tech }}" placeholder="django">
+    </label>
+    <label>Sort
+      <select name="sort">
+        {% for key, label in [('updated','Last updated'),('company','Company'),('role','Role'),('status','Status'),('applied','Date applied')] %}
+        <option value="{{ key }}" {% if key == sort %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="chk">
+      <input type="checkbox" name="remote" value="1" {% if remote %}checked{% endif %}> Remote only
+    </label>
+    <button class="btn btn-primary" type="submit">Filter</button>
+    <a class="btn btn-ghost" href="{{ url_for('applications.index') }}">Reset</a>
+  </form>
+</section>
+
+<section class="card">
+  <table class="table">
+    <tr><th>Company</th><th>Role</th><th>Status</th><th>Applied</th><th>Resume</th><th>Updated</th></tr>
+    {% for a in apps %}
+    <tr>
+      <td>{{ a.job.company or '—' }} {% if a.job.remote %}<span class="pill st-saved">R</span>{% endif %}</td>
+      <td><a href="{{ url_for('applications.detail', app_id=a.id) }}"><strong>{{ a.job.role or '—' }}</strong></a></td>
+      <td><span class="pill {{ STATUS_CLASS[a.status] }}">{{ a.status }}</span>
+        {% if a.is_stale %}<span class="pill pill-warn" title="No movement in 14+ days">⏳ {{ a.days_in_status }}d</span>{% endif %}
+      </td>
+      <td class="muted">{{ a.applied_on.strftime('%d %b') if a.applied_on else '—' }}</td>
+      <td class="muted">{{ a.resume.title if a.resume else '—' }}</td>
+      <td class="muted">{{ a.updated_at.strftime('%d %b %Y') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6"><div class="empty"><span class="empty-ico">🗂</span><p>{% if q or status or company or tech or remote %}Nothing matches these filters — try resetting them.{% else %}No applications tracked yet. Analyze a job, then start tracking it here.{% endif %}</p><a class="btn" href="{{ url_for('applications.new') }}">+ Track application</a></div></td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

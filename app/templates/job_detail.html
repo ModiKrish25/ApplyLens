@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ job.role or 'Job' }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ job.role or 'Untitled role' }}</h1>
+    <p class="muted">{{ job.company or 'Unknown company' }}{% if job.location %} · {{ job.location }}{% endif %}{% if job.remote %} · Remote-friendly{% endif %}</p>
+  </div>
+  <div class="btn-row">
+    <a class="btn btn-primary" href="{{ url_for('jobs.match', job_id=job.id) }}">⚖ Match my resumes</a>
+    <a class="btn" href="{{ url_for('jobs.export_keywords', job_id=job.id) }}">Export keywords (.txt)</a>
+  </div>
+</div>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Structured record</h2>
+    <table class="table kv">
+      <tr><th>Company</th><td>{{ job.company or '—' }}</td></tr>
+      <tr><th>Role</th><td>{{ job.role or '—' }}</td></tr>
+      <tr><th>Location</th><td>{{ job.location or '—' }} {% if job.remote %}<span class="pill st-saved">remote</span>{% endif %}</td></tr>
+      <tr><th>Experience</th><td>{{ job.experience or '—' }}</td></tr>
+      <tr><th>Salary</th><td>{{ job.salary or '—' }}</td></tr>
+      <tr><th>Type</th><td>{{ job.work_type or '—' }}</td></tr>
+      <tr><th>Added</th><td>{{ job.created_at.strftime('%d %b %Y') }}</td></tr>
+    </table>
+
+    <h2>Required skills <span class="muted small">({{ job.required_skills|length }})</span></h2>
+    <div class="chips">
+      {% for s in job.required_skills %}<span class="chip chip-req">{{ s }}</span>{% endfor %}
+    </div>
+    <h2 class="mt">Preferred skills <span class="muted small">({{ job.preferred_skills|length }})</span></h2>
+    <div class="chips">
+      {% for s in job.preferred_skills %}<span class="chip chip-ok">{{ s }}</span>{% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Keyword profile</h2>
+    <p class="muted small">Raw frequency of meaningful words in the posting — no black-box weighting.</p>
+    <div class="kw-cols">
+      <div>
+        <h3>Technical</h3>
+        {% for k in keywords.technical[:15] %}
+        <div class="kw-row">
+          <span class="kw-word">{{ k.word }}</span>
+          <span class="bar"><span class="bar-fill" style="width: {{ (100 * k.count / (keywords.technical[0].count if keywords.technical else 1))|round|int }}%"></span></span>
+          <span class="kw-count">{{ k.count }}</span>
+        </div>
+        {% else %}<p class="muted">No keywords.</p>{% endfor %}
+      </div>
+      <div>
+        <h3>Soft skills</h3>
+        {% for k in keywords.soft[:10] %}
+        <div class="kw-row">
+          <span class="kw-word">{{ k.word }}</span>
+          <span class="bar"><span class="bar-fill bar-soft" style="width: {{ (100 * k.count / (keywords.soft[0].count if keywords.soft else 1))|round|int }}%"></span></span>
+          <span class="kw-count">{{ k.count }}</span>
+        </div>
+        {% else %}<p class="muted">None detected.</p>{% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Track this job</h2>
+  {% if app %}
+  <p>Already tracking — status: <span class="pill {{ STATUS_CLASS[app.status] }}">{{ app.status }}</span>
+     <a href="{{ url_for('applications.detail', app_id=app.id) }}">Open application →</a></p>
+  {% else %}
+  <form method="post" action="{{ url_for('applications.new') }}" class="form-grid">
+    <input type="hidden" name="job_id" value="{{ job.id }}">
+    <label>Status
+      <select name="status">
+        {% for s in statuses %}<option value="{{ s }}" {% if s == 'Saved' %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Resume used
+      <select name="resume_id">
+        <option value="">— none —</option>
+        {% for r in resumes %}<option value="{{ r.id }}">{{ r.title }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Applied on
+      <input type="date" name="applied_on">
+    </label>
+    <button class="btn btn-primary" type="submit">Start tracking</button>
+  </form>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Original posting</h2>
+<pre class="code">{{ job.source_text }}</pre>
+</section>
+{% endblock %}

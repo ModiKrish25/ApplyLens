@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Reports</h1></div>
+
+<section class="card">
+  <h2>Resume reports (PDF)</h2>
+  <p class="muted small"><strong>Health report</strong> = analysis of your file · <strong>Clean resume</strong> = a freshly typeset résumé rebuilt from the parsed content.</p>
+  {% for r in resumes %}
+  <div class="row-item">
+    <span><strong>{{ r.title }}</strong> <span class="muted small">· {{ r.word_count }} words · score {{ r.health_score if r.health_score is not none else '—' }}/100</span></span>
+    <span class="btn-row">
+      <a class="btn btn-sm" href="{{ url_for('reports.resume_report', resume_id=r.id) }}">Health report</a>
+      <a class="btn btn-sm btn-primary" href="{{ url_for('reports.resume_document', resume_id=r.id) }}">Clean resume</a>
+    </span>
+  </div>
+  {% else %}
+  <p class="muted">No resumes yet.</p>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Job match reports (PDF)</h2>
+  <p class="muted small">Pick a job, then the resume version to compare against.</p>
+  {% for j in jobs %}
+  <details class="acc">
+    <summary><strong>{{ j.company or 'Unknown' }}</strong> — {{ j.role or 'Untitled role' }}</summary>
+    <div class="acc-body">
+      {% for r in resumes %}
+      <a class="btn btn-sm" href="{{ url_for('reports.job_report', job_id=j.id, resume_id=r.id) }}">
+        {{ r.title }} ({{ r.health_score if r.health_score is not none else '?' }}/100)</a>
+      {% else %}
+      <span class="muted">No resumes to compare.</span>
+      {% endfor %}
+    </div>
+  </details>
+  {% else %}
+  <p class="muted">No jobs yet.</p>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Application summaries (PDF)</h2>
+  {% for a in apps %}
+  <div class="row-item">
+    <span><strong>{{ a.job.company or 'Unknown' }}</strong> — {{ a.job.role or 'Untitled role' }}
+      <span class="pill {{ 'st-offer' if a.status == 'Offer' else '' }}">{{ a.status }}</span></span>
+    <a class="btn btn-sm" href="{{ url_for('reports.application_report', app_id=a.id) }}">Generate PDF</a>
+  </div>
+  {% else %}
+  <p class="muted">No tracked applications yet.</p>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Career analytics report (PDF)</h2>
+  <p>A snapshot of your whole pipeline: totals, funnel, rates.</p>
+  <a class="btn btn-primary" href="{{ url_for('reports.analytics_report') }}">Generate PDF</a>
+</section>
+
+<section class="card">
+  <h2>Other exports</h2>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('applications.export_csv') }}">Applications CSV</a>
+  </div>
+  <p class="muted small">Per-resume text analysis exports are on each resume's detail page.</p>
+</section>
+{% endblock %}

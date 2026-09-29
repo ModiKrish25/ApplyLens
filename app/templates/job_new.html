@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Analyze job{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Analyze a job description</h1></div>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Paste the description</h2>
+    <form method="post" class="stack">
+      <div class="form-grid">
+        <label>Company <span class="muted">(optional, overrides detection)</span>
+          <input type="text" name="company" placeholder="Acme Corp">
+        </label>
+        <label>Role <span class="muted">(optional)</span>
+          <input type="text" name="role" placeholder="Backend Developer">
+        </label>
+      </div>
+      <label>Job description text
+        <textarea name="description" rows="14" required
+          placeholder="Paste the full job posting here. Labelled lines like 'Role: …', 'Company: …', 'Location: …', 'Experience: 2+ years' improve detection."></textarea>
+      </label>
+      <button class="btn btn-primary" type="submit">Analyze &amp; save</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>What you'll get</h2>
+    <ul class="plain-list">
+      <li>Structured record: role, company, location, salary, experience, remote flag</li>
+      <li>Required vs preferred skills (from “Preferred / Nice-to-have” sections)</li>
+      <li>Keyword frequency profile (technical + soft skills)</li>
+      <li>One-click resume ↔ job matching for every resume version</li>
+    </ul>
+    <h2 class="mt">Example skeleton that parses well</h2>
+<pre class="code">Company: ExampleCorp
+Role: Backend Developer
+Location: Bengaluru (Remote)
+Experience: 2+ years
+
+Required skills:
+- Python, Django, REST APIs
+- PostgreSQL, Docker
+
+Preferred:
+Redis, Celery, AWS
+
+Responsibilities:
+- Build and scale REST APIs…
+</pre>
+    <p class="muted small">All extraction is rule-based and visible — nothing is hidden behind an API.</p>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Dashboard</h1>
+  <div class="btn-row">
+    <a class="btn btn-primary" href="{{ url_for('resumes.index') }}">+ Upload resume</a>
+    <a class="btn" href="{{ url_for('jobs.new') }}">+ Analyze a job</a>
+    <a class="btn" href="{{ url_for('applications.new') }}">+ Track application</a>
+  </div>
+</div>
+
+<section class="grid grid-4">
+  <div class="card stat accent-top"><span class="stat-num">{{ total_apps }}</span><span class="stat-label">Applications</span><a class="link-sm" href="{{ url_for('applications.index') }}">View all →</a></div>
+  <div class="card stat accent-top"><span class="stat-num">{{ active_apps }}</span><span class="stat-label">Active</span><a class="link-sm" href="{{ url_for('applications.board') }}">Pipeline →</a></div>
+  <div class="card stat accent-top"><span class="stat-num">{{ resume_count }}</span><span class="stat-label">Resume versions</span><a class="link-sm" href="{{ url_for('resumes.index') }}">Manage →</a></div>
+  <div class="card stat accent-top"><span class="stat-num">{{ offers }}</span><span class="stat-label">Offers</span><a class="link-sm" href="{{ url_for('applications.offers') }}">Compare →</a></div>
+</section>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Pipeline</h2>
+    <table class="table">
+      <tr><th>Status</th><th class="num">Count</th></tr>
+      {% for s in statuses if counts[s] %}
+      <tr>
+        <td><span class="pill {{ STATUS_CLASS[s] }}">{{ s }}</span></td>
+        <td class="num">{{ counts[s] }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2" class="muted">No applications tracked yet.</td></tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  {% if followups_due %}
+  <section class="card accent-top">
+    <h2>📌 Follow-ups due</h2>
+    <p class="muted small">No movement in {{ 7 }}+ days — a short nudge reply is the highest-value 10 minutes of your day.</p>
+    {% for d in followups_due %}
+    <div class="row-item">
+      <div>
+        <strong>{{ d.app.job.company or 'Unknown' }}</strong> — {{ d.app.job.role or 'Untitled role' }}
+        <div class="muted small">{% if d.kind == 'stale' %}⚠ stale · {% endif %}in “{{ d.app.status }}” for {{ d.days }} day{{ 's' if d.days != 1 }}</div>
+      </div>
+      <form method="post" action="{{ url_for('applications.followup', app_id=d.app.id) }}" class="inline btn-row">
+        <button class="btn btn-sm btn-primary" type="submit">Log nudge</button>
+        <a class="btn btn-sm" href="{{ url_for('applications.detail', app_id=d.app.id) }}">Open</a>
+      </form>
+    </div>
+    {% endfor %}
+  </section>
+  {% elif stale_apps %}
+  <section class="card">
+    <h2>⏳ Needs attention</h2>
+    <p class="muted small">Open applications with no movement in 14+ days — time for a follow-up.</p>
+    {% for a in stale_apps %}
+    <div class="row-item">
+      <div>
+        <strong>{{ a.job.company or 'Unknown' }}</strong> — {{ a.job.role or 'Untitled role' }}
+        <div class="muted small">in “{{ a.status }}” for {{ a.days_in_status }} days</div>
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-sm" href="{{ url_for('applications.detail', app_id=a.id) }}">Open →</a>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <h2>Upcoming interviews</h2>
+    {% for iv in upcoming %}
+    <div class="row-item">
+      <div>
+        <strong>{{ iv.round_name }}</strong> — {{ iv.job.company or 'Unknown co.' }} · {{ iv.job.role or 'Unknown role' }}
+        <div class="muted">{{ iv.scheduled_at.strftime('%a, %d %b %Y %H:%M') }} UTC · {{ iv.mode or 'mode TBC' }}</div>
+      </div>
+      <span class="pill st-interview">Scheduled</span>
+    </div>
+    {% else %}
+    <div class="empty"><span class="empty-ico">🎤</span><p>Nothing scheduled. Add interviews from an application page.</p></div>
+    {% endfor %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Recent activity</h2>
+  <table class="table">
+    <tr><th>Company</th><th>Role</th><th>Status</th><th>Updated</th></tr>
+    {% for a in recent_apps %}
+    <tr>
+      <td>{{ a.job.company or '—' }}</td>
+      <td><a href="{{ url_for('applications.detail', app_id=a.id) }}">{{ a.job.role or '—' }}</a></td>
+      <td><span class="pill {{ STATUS_CLASS[a.status] }}">{{ a.status }}</span></td>
+      <td class="muted">{{ a.updated_at.strftime('%d %b %Y') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">Start by analyzing a job description.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

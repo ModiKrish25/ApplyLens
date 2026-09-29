@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Career analytics</h1>
+    <p class="muted">All numbers computed from your own data with visible rules.</p>
+  </div>
+  <a class="btn" href="{{ url_for('reports.analytics_report') }}">🖨 PDF report</a>
+</div>
+
+<section class="grid grid-4">
+  {% for k, v in stats.items() %}
+  <div class="card stat"><span class="stat-num">{{ v }}</span><span class="stat-label">{{ k }}</span></div>
+  {% endfor %}
+</section>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Pipeline funnel</h2>
+    {% for label, n in funnel %}
+    <div class="kw-row">
+      <span class="kw-word">{{ label }}</span>
+      <span class="bar"><span class="bar-fill" style="width: {{ (100 * n / funnel_max)|round|int }}%"></span></span>
+      <span class="kw-count">{{ n }}</span>
+    </div>
+    {% endfor %}
+    <p class="muted small">Counts are current statuses — a stage you skipped still shows where people stand now.</p>
+  </section>
+
+  <section class="card">
+    <h2>Applied vs rejected · last 8 weeks</h2>
+    {% for w in weeks %}
+    <div class="kw-row">
+      <span class="kw-word">{{ w.label }}</span>
+      <span class="bar"><span class="bar-fill" style="width: {{ (100 * w.applied / week_max)|round|int }}%"></span></span>
+      <span class="kw-count">{{ w.applied }} up</span>
+    </div>
+    <div class="kw-row">
+      <span class="kw-word"></span>
+      <span class="bar"><span class="bar-fill bar-miss" style="width: {{ (100 * w.rejected / week_max)|round|int }}%"></span></span>
+      <span class="kw-count">{{ w.rejected }} rej</span>
+    </div>
+    {% endfor %}
+  </section>
+</div>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Top companies</h2>
+    <table class="table">
+      <tr><th>Company</th><th class="num">Applications</th><th>Best status</th></tr>
+      {% for name, info in top_companies %}
+      <tr>
+        <td>{{ name }}</td>
+        <td class="num">{{ info.count }}</td>
+        <td><span class="pill {{ 'st-offer' if statuses[info.best] == 'Offer' else '' }}">{{ statuses[info.best] }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="muted">No data yet.</td></tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Most demanded skills in your saved jobs</h2>
+    {% for name, info in top_demand %}
+    <div class="kw-row">
+      <span class="kw-word">{{ name }}</span>
+      <span class="bar"><span class="bar-fill" style="width: {{ (100 * info.count / (top_demand[0][1].count if top_demand else 1))|round|int }}%"></span></span>
+      <span class="kw-count">{{ info.count }} JD{{ 's' if info.count != 1 }}</span>
+    </div>
+    {% else %}
+    <p class="muted">Analyze jobs to see demand.</p>
+    {% endfor %}
+  </section>
+</div>
+
+<div class="cols-2">
+  <section class="card accent-top">
+    <h2>⭐ Market demand vs your skills</h2>
+    <p class="muted small">What the jobs you saved ask for, against your honest self-assessment. Red = market wants it, you don't have it yet.</p>
+    {% for d in demand_vs_skill %}
+    <div class="kw-row">
+      <span class="kw-word">{{ d.name }}</span>
+      <span class="bar"><span class="bar-fill {% if d.score < 0 %}bar-miss{% elif d.score <= 1 %}bar-soft{% endif %}" style="width: {{ (100 * d.count / (demand_vs_skill[0].count if demand_vs_skill else 1))|round|int }}%"></span></span>
+      <span class="kw-count">
+        {% if d.level %}{{ d.level }}{% else %}untracked{% endif %} · {{ d.count }} JD{{ 's' if d.count != 1 }}
+      </span>
+    </div>
+    {% else %}
+    <p class="muted">Analyze jobs and self-track skills to see the gap.</p>
+    {% endfor %}
+    <p class="small mt"><a href="{{ url_for('analytics.learning_plan') }}">Turn the red ones into goals →</a></p>
+  </section>
+
+  <section class="card accent-top">
+    <h2>⭐ Funnel conversion</h2>
+    <p class="muted small">Of applications that reached the previous stage, the share that moved on. Small samples are noisy — read trends, not single digits.</p>
+    {% for c in conversions %}
+    <div class="kw-row">
+      <span class="kw-word">{{ c.from }} → {{ c.to }}</span>
+      <span class="bar"><span class="bar-fill {% if c.rate is not none and c.rate < 25 %}bar-miss{% endif %}" style="width: {{ c.rate or 0 }}%"></span></span>
+      <span class="kw-count">{{ (c.rate ~ '%') if c.rate is not none else '—' }}</span>
+    </div>
+    {% endfor %}
+    {% if stage_days %}
+    <h3 class="mt">Average days in current stage</h3>
+    <div class="chips">
+      {% for stage, days in stage_days.items() %}
+      <span class="chip">{{ stage }}: <strong>{{ days }}d</strong></span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card accent-top">
+  <h2>⭐ Response times <span class="muted small">(learned from your own history)</span></h2>
+  <p class="muted">{{ rt_note }}</p>
+  {% if rt.by_company %}
+  <div class="kw-row" style="margin-top:.6rem">
+    <span class="kw-word"><strong>Company</strong></span><span></span><span class="kw-count"><strong>Median reply</strong></span>
+  </div>
+  {% for r in rt.by_company %}
+  <div class="kw-row">
+    <span class="kw-word">{{ r.company }}</span>
+    <span class="bar"><span class="bar-fill" style="width: {{ [r.median_days * 4, 100]|min if r.median_days is not none else 0 }}%"></span></span>
+    <span class="kw-count">{{ r.median_days }}d · {{ r.samples }} sample{{ 's' if r.samples != 1 }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% if rt.waiting %}
+  <h3 class="mt">Waiting for a reply</h3>
+  {% for w in rt.waiting %}
+  <div class="row-item">
+    <span><strong>{{ w.company }}</strong> — {{ w.role }}</span>
+    <span class="pill {{ 'pill-warn' if w.days > 14 else 'st-saved' }}">{{ w.days }}d waiting</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+  <p class="muted small">Medians, not magic — computed from your status history; samples &lt; 4 are low confidence.</p>
+</section>
+
+<section class="card">
+  <h2>Resume usage</h2>
+  <table class="table">
+    <tr><th>Resume</th><th class="num">Applications</th><th class="num">Health score</th></tr>
+    {% for item in resume_usage %}
+    <tr>
+      <td><a href="{{ url_for('resumes.detail', resume_id=item.resume.id) }}">{{ item.resume.title }}</a></td>
+      <td class="num">{{ item.uses }}</td>
+      <td class="num">{{ item.resume.health_score if item.resume.health_score is not none else '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="muted">No resumes yet.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+
+<section class="card">
+  <h2>Self-tracked skill levels</h2>
+  <div class="chips">
+    {% for lv, n in level_counts.items() %}
+    <span class="chip">{{ lv }}: <strong>{{ n }}</strong></span>
+    {% endfor %}
+  </div>    <p class="muted small">Update these on the <a href="{{ url_for('analytics.my_skills') }}">My Skills</a> page, or plan gaps in your <a href="{{ url_for('analytics.learning_plan') }}">learning plan</a>.</p>
+</section>
+{% endblock %}

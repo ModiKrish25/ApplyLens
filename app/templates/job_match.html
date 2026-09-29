@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Match — {{ job.role }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Match: {{ job.role or 'Untitled role' }}</h1>
+    <p class="muted">{{ job.company or 'Unknown company' }} · {{ job.required_skills|length }} required · {{ job.preferred_skills|length }} preferred skills</p>
+  </div>
+  <a class="btn" href="{{ url_for('jobs.detail', job_id=job.id) }}">← Job details</a>
+</div>
+
+{% for r, m in results %}
+<section class="card">
+  <div class="match-head">
+    <div>
+      <h2><a href="{{ url_for('jobs.match_detail', job_id=job.id, resume_id=r.id) }}">{{ r.title }}</a></h2>
+      <p class="muted small">
+        Required: {{ m.req_matched }}/{{ m.req_total }} matched
+        · Preferred: {{ m.pref_matched }}/{{ m.pref_total }} matched
+        {% if m.weak %} · {{ m.weak|length }} mentioned only once{% endif %}
+      </p>
+    </div>
+    <div class="score-big {{ 'score-hi' if m.coverage >= 75 else ('score-mid' if m.coverage >= 50 else 'score-lo') }}">{{ m.coverage }}<span class="small">%</span></div>
+  </div>
+
+  <div class="chips">
+    {% for s in m.required %}
+    <span class="chip {% if s.matched %}chip-ok{% else %}chip-miss{% endif %}">
+      {{ '✓' if s.matched else '✗' }} {{ s.name }}</span>
+    {% endfor %}
+    {% for s in m.preferred %}
+    <span class="chip {% if s.matched %}chip-ok{% else %}chip-miss{% endif %}">{{ '✓' if s.matched else '✗' }} {{ s.name }} <em>(pref)</em></span>
+    {% endfor %}
+  </div>
+
+  <a class="btn btn-sm" href="{{ url_for('jobs.match_detail', job_id=job.id, resume_id=r.id) }}">Full analysis &amp; evidence →</a>
+</section>
+{% else %}
+<section class="card"><p class="muted">Upload a resume first, then come back to match it against this job.</p></section>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ app.job.company }} — {{ app.job.role }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ app.job.company or 'Unknown company' }} — {{ app.job.role or 'Untitled role' }}</h1>
+    <p class="muted">
+      Status: <span class="pill {{ STATUS_CLASS[app.status] }}">{{ app.status }}</span>
+      · <a href="{{ url_for('jobs.detail', job_id=app.job.id) }}">job record</a>
+      {% if app.job.remote %} · remote{% endif %}
+    </p>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('reports.application_report', app_id=app.id) }}">PDF summary</a>
+    <a class="btn" href="{{ url_for('jobs.match_detail', job_id=app.job.id, resume_id=app.resume.id) if app.resume else url_for('jobs.match', job_id=app.job.id) }}">Match report</a>
+    {% if app.resume %}<a class="btn btn-primary" href="{{ url_for('applications.prep', app_id=app.id) }}">🎤 Prep kit</a>{% endif %}
+  </div>
+</div>
+
+<div class="cols-2">
+  <section class="card">
+    <h2>Update application</h2>
+    <form method="post" action="{{ url_for('applications.update', app_id=app.id) }}" class="stack">
+      <div class="form-grid">
+        <label>Status
+          <select name="status">
+            {% for s in statuses %}<option value="{{ s }}" {% if s == app.status %}selected{% endif %}>{{ s }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Resume used
+          <select name="resume_id">
+            <option value="">— none —</option>
+            {% for r in resumes %}<option value="{{ r.id }}" {% if app.resume and r.id == app.resume.id %}selected{% endif %}>{{ r.title }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Applied on
+          <input type="date" name="applied_on" value="{{ app.applied_on.isoformat() if app.applied_on else '' }}">
+        </label>
+      </div>
+      <label>Notes
+        <textarea name="notes" rows="4">{{ app.notes }}</textarea>
+      </label>
+      {% if app.status != statuses|first %}
+      <label>Status note <span class="muted">(optional, saved to timeline)</span>
+        <input type="text" name="status_note" placeholder="e.g. recruiter call went great">
+      </label>
+      {% endif %}
+      <button class="btn btn-primary" type="submit">Save changes</button>
+    </form>
+    <form method="post" action="{{ url_for('applications.followup', app_id=app.id) }}" class="mt" style="margin-top:.8rem">
+      <button class="btn" type="submit">📌 Log follow-up sent</button>
+      {% if app.is_stale %}<span class="pill pill-warn">stale · {{ app.days_in_status }} days in “{{ app.status }}”</span>{% endif %}
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Interviews</h2>
+    {% for iv in interviews %}
+    <div class="row-item">
+      <div>
+        <strong>{{ iv.round_name }}</strong>
+        <div class="muted">{{ iv.scheduled_at.strftime('%a, %d %b %Y %H:%M') }} · {{ iv.mode or 'mode TBC' }}{% if iv.location %} · {{ iv.location }}{% endif %}</div>
+        {% if iv.notes %}<div class="small">{{ iv.notes }}</div>{% endif %}
+      </div>
+      <form method="post" action="{{ url_for('applications.interview_outcome', iv_id=iv.id) }}" class="inline btn-row">
+        <select name="outcome">
+          {% for o in ['Pending','Passed','Failed'] %}
+          <option value="{{ o }}" {% if o == iv.outcome %}selected{% endif %}>{{ o }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-sm" type="submit">Set</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="muted">No interviews yet.</p>
+    {% endfor %}
+
+    <h2 class="mt">Add interview</h2>
+    <form method="post" action="{{ url_for('applications.add_interview', app_id=app.id) }}" class="stack">
+      <div class="form-grid">
+        <label>Round
+          <input type="text" name="round_name" placeholder="Technical Round 1">
+        </label>
+        <label>When
+          <input type="datetime-local" name="scheduled_at" required>
+        </label>
+        <label>Mode
+          <select name="mode">
+            <option value="">—</option>
+            <option>Phone</option><option>Video</option><option>Onsite</option><option>Task</option>
+          </select>
+        </label>
+        <label>Outcome
+          <select name="outcome">
+            <option>Pending</option><option>Passed</option><option>Failed</option>
+          </select>
+        </label>
+      </div>
+      <label>Notes
+        <textarea name="notes" rows="2" placeholder="Interviewer names, topics to prepare…"></textarea>
+      </label>
+      <button class="btn" type="submit">+ Add interview</button>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Status timeline</h2>
+  <p class="muted small">Every status change is recorded — your pipeline history, exactly as it happened.</p>
+  <div class="timeline">
+    {% for h in app.history %}
+    <div class="tl-item {{ 'tl-first' if loop.first }}">
+      <strong>{{ h.to_status }}</strong>
+      {% if h.from_status and h.from_status != h.to_status %}<span class="muted small">← from {{ h.from_status }}</span>{% endif %}
+      <div class="tl-when">{{ h.changed_at.strftime('%a, %d %b %Y %H:%M') }} UTC</div>
+      {% if h.note %}<div class="small">{{ h.note }}</div>{% endif %}
+    </div>
+    {% else %}
+    <p class="muted">No history recorded yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

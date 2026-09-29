@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Offers{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Offers</h1>
+    <p class="muted">Everything you've landed, side by side. Decide with the whole picture.</p>
+  </div>
+  {% if offers %}<a class="btn btn-primary" href="{{ url_for('applications.offer_matrix') }}">⚖️ Decision matrix</a>{% endif %}
+</div>
+
+{% if offers %}
+<section class="offer-grid">
+  {% for o in offers %}
+  <div class="card offer-card accent-top">
+    <span class="rank">#{{ loop.index }}</span>
+    <h2 style="margin-top:0"><a href="{{ url_for('applications.detail', app_id=o.id) }}">{{ o.job.company or 'Unknown' }}</a></h2>
+    <p class="muted" style="margin-top:-.3rem">{{ o.job.role or 'Untitled role' }}</p>
+    <table class="table kv">
+      <tr><th>Location</th><td>{{ o.job.location or '—' }} {% if o.job.remote %}<span class="pill st-saved">remote</span>{% endif %}</td></tr>
+      <tr><th>Salary</th><td><strong>{{ o.job.salary or 'Not recorded' }}</strong></td></tr>
+      <tr><th>Type</th><td>{{ o.job.work_type or '—' }}</td></tr>
+      <tr><th>Resume</th><td>{{ o.resume.title if o.resume else '—' }}</td></tr>
+      <tr><th>Interviews</th><td>{{ o.interview_count }} round{{ 's' if o.interview_count != 1 }}</td></tr>
+      <tr><th>Offered</th><td>{{ o.updated_at.strftime('%d %b %Y') }}</td></tr>
+    </table>
+    {% if o.notes %}<p class="small muted">{{ o.notes|truncate(140) }}</p>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <h2>Compare at a glance</h2>
+  <table class="table">
+    <tr><th>#</th><th>Company</th><th>Role</th><th>Salary</th><th>Location</th><th>Remote</th><th>Rounds</th></tr>
+    {% for o in offers %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td><strong>{{ o.job.company or '—' }}</strong></td>
+      <td>{{ o.job.role or '—' }}</td>
+      <td>{{ o.job.salary or '—' }}</td>
+      <td>{{ o.job.location or '—' }}</td>
+      <td>{{ 'Yes' if o.job.remote else 'No' }}</td>
+      <td class="num">{{ o.interview_count }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted small">Salary shows whatever was captured from the posting — record it manually on the job if needed.</p>
+</section>
+{% else %}
+<section class="card empty">
+  <span class="empty-ico">🏅</span>
+  <p>No offers yet — they'll appear here automatically when you move an application to <strong>Offer</strong>.</p>
+  <a class="btn" href="{{ url_for('applications.index') }}">Open applications →</a>
+</section>
+{% endif %}
+{% endblock %}

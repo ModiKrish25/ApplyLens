@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ mode|capitalize }}{% endblock %}
+{% block auth_content %}
+<div class="auth-card">
+  <div class="auth-hero">
+    <a class="brand-big" href="{{ url_for('dashboard.index') }}"><span class="brand-dot">◉</span> ApplyLens</a>
+    <p class="tag">Resume intelligence &amp; job-application tracking — honest, rule-based, no black boxes.</p>
+
+    <div class="greeter-stage">
+      <img class="greeter" src="{{ url_for('static', filename='img/image.png') }}" alt="Friendly waving greeter">
+      <div class="auth-hello"><span>hello! 👋</span></div>
+    </div>
+
+    <ul class="auth-points">
+      <li><span class="tick">✓</span> See exactly why a job matches — every claim backed by quoted evidence</li>
+      <li><span class="tick">✓</span> Track applications, interviews and offers in one warm, calm place</li>
+      <li><span class="tick">✓</span> Transparent checklist scores — no mysterious “AI percentages”</li>
+    </ul>
+  </div>
+
+  <div class="auth-side">
+    {% if mode == 'signup' %}
+    <h1>Create your account</h1>
+    <p class="muted">Free, local, and private — your data never leaves this machine.</p>
+    <form method="post" class="stack" novalidate>
+      <label>Name
+        <input type="text" name="name" placeholder="Ada Lovelace" autocomplete="name"
+               minlength="2" required value="{{ form.get('name', '') }}">
+      </label>
+      <label>Email
+        <input type="email" name="email" placeholder="you@example.com" autocomplete="email"
+               required value="{{ form.get('email', '') }}">
+      </label>
+      <label>Password
+        <input type="password" name="password" id="pw" minlength="8" autocomplete="new-password" required>
+      </label>
+
+      <div class="pw-meter" id="pw-meter" hidden>
+        <div class="pw-bars"><span></span><span></span><span></span><span></span></div>
+        <span class="pw-label small muted" id="pw-label">—</span>
+      </div>
+      <ul class="pw-checklist small" id="pw-checklist">
+        {% for rid, (label, _test) in pw_rules.items() %}
+        <li data-rule="{{ rid }}">{{ label }}</li>
+        {% endfor %}
+      </ul>
+
+      <label>Confirm password
+        <input type="password" name="confirm" id="pw-confirm" minlength="8" autocomplete="new-password" required>
+      </label>
+      <p class="small pw-match muted" id="pw-match" hidden></p>
+
+      <button class="btn btn-primary" type="submit">Create account</button>
+    </form>
+    <p class="muted">Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></p>
+
+    {% else %}
+    <h1>Welcome back</h1>
+    <p class="muted">Log in to your pipeline, resumes and reports.</p>
+    <form method="post" class="stack">
+      <label>Email
+        <input type="email" name="email" autocomplete="email" required value="{{ form.get('email', '') }}">
+      </label>
+      <label>Password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn-primary" type="submit">Log in</button>
+    </form>
+    <p class="muted">New here? <a href="{{ url_for('auth.signup') }}">Create an account</a></p>
+    {% endif %}
+  </div>
+</div>
+
+{% if mode == 'signup' %}
+<script>
+(function () {
+  var pw = document.getElementById('pw');
+  var confirm_ = document.getElementById('pw-confirm');
+  if (!pw) return;
+  var meter = document.getElementById('pw-meter');
+  var bars = meter.querySelectorAll('.pw-bars span');
+  var label = document.getElementById('pw-label');
+  var items = document.querySelectorAll('#pw-checklist li');
+  var matchNote = document.getElementById('pw-match');
+
+  var tests = {
+    len:     function (v) { return v.length >= 8; },
+    upper:   function (v) { return /[A-Z]/.test(v); },
+    lower:   function (v) { return /[a-z]/.test(v); },
+    digit:   function (v) { return /\d/.test(v); },
+    special: function (v) { return /[^A-Za-z0-9]/.test(v); },
+    space:   function (v) { return v.indexOf(' ') === -1; }
+  };
+  var labels = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong'];
+
+  function update() {
+    var v = pw.value;
+    meter.hidden = v.length === 0;
+    var failed = 0;
+    items.forEach(function (li) {
+      var ok = tests[li.dataset.rule](v);
+      li.classList.toggle('ok', ok);
+      if (!ok) failed++;
+    });
+    var score = Math.max(0, 4 - Math.min(failed, 4));
+    if (v.length >= 12 && failed === 0) score = 4;
+    bars.forEach(function (b, i) {
+      b.className = i < score ? 'on s' + score : '';
+    });
+    label.textContent = labels[score];
+
+    if (confirm_.value) {
+      matchNote.hidden = false;
+      if (confirm_.value === v) {
+        matchNote.textContent = '✓ Passwords match';
+        matchNote.className = 'small pw-match ok';
+      } else {
+        matchNote.textContent = '✗ Passwords don’t match yet';
+        matchNote.className = 'small pw-match bad';
+      }
+    } else {
+      matchNote.hidden = true;
+    }
+  }
+  pw.addEventListener('input', update);
+  confirm_.addEventListener('input', update);
+})();
+</script>
+{% endif %}
+{% endblock %}

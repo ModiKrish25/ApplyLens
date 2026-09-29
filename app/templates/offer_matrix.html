@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Offer decision matrix{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Offer decision matrix</h1>
+    <p class="muted">You set the weights; the math is simple and fully visible. No black box — adjust a slider and the ranking updates deterministically.</p>
+  </div>
+</div>
+
+{% if has_offers %}
+<section class="card">
+  <h2>Your priorities</h2>
+  <form method="post" class="weight-grid">
+    {% for key, label in [('salary','Salary'), ('remote','Remote friendly'), ('growth','Growth'), ('location','Location')] %}
+    {% set w = weights[key] %}
+    <div class="weight-item">
+      <label for="w_{{ key }}">{{ label }} <strong class="muted">{{ w }} pt{{ 's' if w != 1 }}</strong></label>
+      <input type="range" id="w_{{ key }}" name="w_{{ key }}" min="0" max="100" step="5" value="{{ w }}">
+    </div>
+    {% endfor %}
+    <div class="weight-total">Total <strong>{{ total_w }}</strong> — shares are normalized, so any total works.</div>
+    <button class="btn btn-primary" type="submit">Recalculate</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Ranking</h2>
+  {% for r in rows %}
+  <div class="offer-rank {% if loop.first %}offer-winner{% endif %}">
+    <div class="offer-rank-head">
+      <span class="rank">#{{ loop.index }}</span>
+      <div class="grow">
+        <strong><a href="{{ url_for('applications.detail', app_id=r.app.id) }}">{{ r.app.job.company or 'Unknown' }}</a> — {{ r.app.job.role or 'Untitled role' }}</strong>
+        <div class="muted small">{{ r.app.job.location or '—' }}{% if r.app.job.remote %} · remote{% endif %} · {{ r.app.interview_count }} round{{ 's' if r.app.interview_count != 1 }}</div>
+      </div>
+      <div class="score-big {{ 'score-hi' if r.total >= 70 else ('score-mid' if r.total >= 50 else 'score-lo') }}" style="font-size:1.6rem">{{ r.total }}</div>
+    </div>
+    <table class="table matrix-table">
+      <tr>
+        {% for k, cell in r.weighted.items() %}
+        <td>
+          <div class="matrix-cell">
+            <span class="small"><strong>{{ cell.label }}</strong> · {{ cell.weight_pct }}%</span>
+            <span class="bar"><span class="bar-fill {% if cell.rating <= 3 %}bar-miss{% elif cell.rating >= 8 %}{% else %}bar-soft{% endif %}" style="width: {{ cell.rating * 10 }}%"></span></span>
+            <span class="small muted">{{ cell.rating }}/10 → +{{ cell.contribution }}</span>
+          </div>
+        </td>
+        {% endfor %}
+      </tr>
+    </table>
+  </div>
+  {% endfor %}
+  <p class="muted small">Each factor: rating 0-10 × your weight share × 10 = contribution. Sum = the score. Unknown salary scores a neutral 5 and is flagged.</p>
+</section>
+{% else %}
+<section class="card empty">
+  <span class="empty-ico">🏅</span>
+  <p>No offers yet — move an application to <strong>Offer</strong> and it will appear here for comparison.</p>
+  <a class="btn" href="{{ url_for('applications.index') }}">Open applications →</a>
+</section>
+{% endif %}
+{% endblock %}

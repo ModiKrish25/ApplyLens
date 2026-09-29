@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Track application{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Track an application</h1></div>
+
+<section class="card">
+  <h2>Pick a saved job</h2>
+  {% if jobs %}
+  <form method="post" class="stack">
+    <label>Job
+      <select name="job_id" required>
+        {% for j in jobs %}
+        <option value="{{ j.id }}" {% if j.application %}disabled{% endif %}>
+          {{ j.company or 'Unknown' }} — {{ j.role or 'Untitled' }}{% if j.application %} (already tracked){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="form-grid">
+      <label>Status
+        <select name="status">
+          {% for s in statuses %}<option value="{{ s }}" {% if s == 'Saved' %}selected{% endif %}>{{ s }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Resume used
+        <select name="resume_id">
+          <option value="">— none —</option>
+          {% for r in resumes %}<option value="{{ r.id }}">{{ r.title }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Applied on
+        <input type="date" name="applied_on">
+      </label>
+    </div>
+    <label>Notes
+      <textarea name="notes" rows="3" placeholder="Referral name, portal link, follow-up reminders…"></textarea>
+    </label>
+    <button class="btn btn-primary" type="submit">Start tracking</button>
+  </form>
+  {% else %}
+  <p class="muted">No jobs saved yet. <a href="{{ url_for('jobs.new') }}">Analyze a job description first</a> — applications always attach to a parsed job record.</p>
+  {% endif %}
+</section>
+{% endblock %}
